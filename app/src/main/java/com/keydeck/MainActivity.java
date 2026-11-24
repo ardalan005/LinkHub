@@ -537,9 +537,9 @@ public class MainActivity extends Activity {
         Paint p = new Paint(Paint.ANTI_ALIAS_FLAG), t = new Paint(Paint.ANTI_ALIAS_FLAG); RectF rf = new RectF();
         LinkedHashMap<String, List<C>> profiles = new LinkedHashMap<String, List<C>>(); String cur = "Xbox"; List<C> cs; boolean edit;
         HashMap<Integer, C> act = new HashMap<Integer, C>(); HashMap<String, Integer> lastAx = new HashMap<String, Integer>();
-        C drag; int dragId = -1; float dxo, dyo; boolean moved; RectF[] br = {new RectF(), new RectF(), new RectF(), new RectF()};
+        C drag; int dragId = -1; float dxo, dyo; boolean moved, barOn = true; RectF[] br = {new RectF(), new RectF(), new RectF(), new RectF(), new RectF()};
 
-        GpView(Context cx) { super(cx); t.setTypeface(Typeface.DEFAULT_BOLD); load(); }
+        GpView(Context cx) { super(cx); t.setTypeface(Typeface.DEFAULT_BOLD); load(); barOn = sp.getBoolean("gpbar", true); }
         float dp(float v) { return v * getResources().getDisplayMetrics().density; }
         float md() { return Math.min(getWidth(), getHeight()); }
         int ct(int c) { return (0.299f * Color.red(c) + 0.587f * Color.green(c) + 0.114f * Color.blue(c)) / 255f > .6f ? 0xFF101010 : 0xFFFFFFFF; }
@@ -628,10 +628,15 @@ public class MainActivity extends Activity {
         @Override protected void onDraw(Canvas c) {
             Theme T = TH[kv.th]; int ac = kv.acc(); p.setStyle(Paint.Style.FILL); p.setShader(new LinearGradient(0, 0, 0, getHeight(), T.bg1, T.bg2, Shader.TileMode.CLAMP)); c.drawRect(0, 0, getWidth(), getHeight(), p); p.setShader(null);
             for (C k : cs) drawC(c, k, T, ac);
-            String[] lb = {"KEYS", edit ? "DONE" : "EDIT", cur, "+ ADD"}; float[] wd = {70, 70, 150, 70}; float x = dp(8), y = dp(6);
-            for (int i = 0; i < 4; i++) {
-                float w = dp(wd[i]); br[i].set(x, y, x + w, y + dp(40)); x += w + dp(6); if (i == 3 && !edit) break;
-                p.setColor(i == 1 && edit ? ac : (T.mod & 0x00FFFFFF) | 0xDD000000); c.drawRoundRect(br[i], dp(10), dp(10), p); txt(c, lb[i], br[i].centerX(), br[i].centerY(), w * .85f, dp(15), i == 1 && edit ? ct(ac) : T.tx);
+            for (int i = 0; i < 4; i++) br[i].setEmpty();
+            br[4].set(dp(8), dp(6), dp(44), dp(42)); p.setColor((T.mod & 0x00FFFFFF) | (barOn ? 0xDD000000 : 0x77000000)); c.drawRoundRect(br[4], dp(10), dp(10), p);
+            p.setColor(T.tx); for (int i = 0; i < 3; i++) c.drawRect(dp(15), dp(15) + i * dp(7), dp(37), dp(18) + i * dp(7), p);
+            if (barOn) {
+                String[] lb = {"KEYS", edit ? "DONE" : "EDIT", cur, "+ ADD"}; float[] wd = {70, 70, 150, 70}; float x = dp(52), y = dp(6);
+                for (int i = 0; i < 4; i++) {
+                    float w = dp(wd[i]); br[i].set(x, y, x + w, y + dp(36)); x += w + dp(6); if (i == 3 && !edit) { br[3].setEmpty(); break; }
+                    p.setColor(i == 1 && edit ? ac : (T.mod & 0x00FFFFFF) | 0xDD000000); c.drawRoundRect(br[i], dp(10), dp(10), p); txt(c, lb[i], br[i].centerX(), br[i].centerY(), w * .85f, dp(15), i == 1 && edit ? ct(ac) : T.tx);
+                }
             }
             p.setColor(link.ok ? 0xFF34D399 : 0xFFFBBF24); c.drawCircle(getWidth() - dp(16), dp(16), dp(6), p);
         }
@@ -645,7 +650,8 @@ public class MainActivity extends Activity {
             return null;
         }
         void pdown(int id, float x, float y) {
-            for (int i = 0; i < 4; i++) if ((i < 3 || edit) && br[i].contains(x, y)) {
+            if (br[4].contains(x, y)) { barOn = !barOn; sp.edit().putBoolean("gpbar", barOn).apply(); invalidate(); return; }
+            for (int i = 0; i < 4; i++) if (br[i].contains(x, y)) {
                 if (i == 0) hidePad(); else if (i == 1) { releaseAll(); edit = !edit; } else if (i == 2) profileDialog(); else addDialog(); return;
             }
             C k = hit(x, y); if (k == null) return;
